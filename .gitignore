@@ -1,0 +1,94 @@
+# ===================================
+# Python Environment & Bytecode
+# ===================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ===================================
+# Virtual Environment
+# ===================================
+.venv/
+venv/
+ENV/
+env/
+*.env.bak
+
+# ===================================
+# IDE / Editor Folders
+# ===================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# ===================================
+# Logs & Cache
+# ===================================
+*.log
+logs/
+*.pid
+*.seed
+.cache/
+__pycache__/
+pytest_cache/
+coverage.xml
+htmlcov/
+*.cover
+.coverage
+*.db
+*.sqlite3
+
+# ===================================
+# Uvicorn / FastAPI generated files
+# ===================================
+*.db-journal
+*.sqlite
+*.pid
+instance/
+uploads/
+tmp/
+temp/
+
+# ===================================
+# NodeJS (if used for frontend builds)
+# ===================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ===================================
+# OS-Specific Files
+# ===================================
+Thumbs.db
+Desktop.ini
+.DS_Store
+ehthumbs.db
+Icon?
+$RECYCLE.BIN/
+
+# ===================================
+# JetBrains / PyCharm
+# ===================================
+.idea/
+*.iml
+
+# ===================================
+# Other Project Specific
+# ===================================
+*.pem
+*.crt
+*.key
+certs/
