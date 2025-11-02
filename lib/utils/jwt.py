@@ -1,34 +1,31 @@
 import jwt
-from datetime import datetime, timedelta
-from typing import Optional
-from lib.config.settings import settings  # import centralized settings
+from datetime import datetime, timedelta, timezone
+from typing import Optional, Dict, Any
+from fastapi import HTTPException, status
+from lib.config.settings import settings
 
-
-# JWT configuration from settings
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """
-    Generate JWT token with optional expiry
-    """
+def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
-    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return token
+    try:
+        token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        return token
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Token generation failed: {str(e)}"
+        )
 
-
-def verify_access_token(token: str) -> dict:
-    """
-    Verify JWT token and return payload
-    """
+def verify_access_token(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
-        raise Exception("Token expired")
+        raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
-        raise Exception("Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token")

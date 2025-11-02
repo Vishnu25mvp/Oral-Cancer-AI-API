@@ -50,4 +50,4 @@ async def init_mongo_db():
 # =========================
 async def init_databases():
     await init_sql_db()
-    await init_mongo_db()
+    # await init_mongo_db()

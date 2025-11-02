@@ -1,29 +1,15 @@
 from fastapi import FastAPI, APIRouter, Depends
-from lib.config.database import get_async_session, get_collection
-from lib.models.sql import User
-from lib.models.nosql import MongoUser
-from sqlmodel import select
-
+from .mail import router as mail_router
+from .user import router as user_router
+from .profile import router as profile_router
+from .result import router as result_router
 # Create a router instance
-router = APIRouter(prefix="/smtp", tags=["SMTP"])
+router = APIRouter()
 
-# Example route
-@router.get("/")
-async def get_smtp_info():
-    return {"message": "SMTP info route"}
-
-@router.get("/test/sql")
-async def test_sql(session=Depends(get_async_session)):
-    result = await session.execute(select(User))
-    users = result.scalars().all()
-    return {"sql_users": [u.dict() for u in users]}
-
-@router.get("/test/mongo")
-async def test_mongo():
-    users_col = get_collection("users")
-    users = await users_col.find().to_list(10)
-    print("Here is the User Data", users)
-    return {"mongo_users": users}
+router.include_router(user_router, prefix='/user')
+router.include_router(profile_router, prefix='/profile')
+router.include_router(mail_router, prefix='/mail')
+router.include_router(result_router, prefix='/result')
 
 # Function to register routes to the main app
 def register_routes(app: FastAPI):

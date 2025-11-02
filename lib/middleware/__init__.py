@@ -2,7 +2,6 @@
 
 # Custom middleware
 from .logger import LoggingMiddleware
-from .auth import AuthMiddleware
 from .exception import ExceptionMiddleware
 
 # Third-party / built-in middleware
@@ -29,6 +28,7 @@ def register_middleware(app):
 
     # 3. GZip for response compression
     app.add_middleware(GZipMiddleware, minimum_size=500)
+    
 
     # 4. Session Middleware (if needed)
     app.add_middleware(SessionMiddleware, secret_key="your_session_secret")
