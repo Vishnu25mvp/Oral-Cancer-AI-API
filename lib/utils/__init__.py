@@ -6,4 +6,5 @@ from .permissions import has_role, require_roles
 from .response import success_response, error_response
 from .smtp import send_email
 from .init_admin import init_admin_user
-__all__ = ["create_access_token", "verify_access_token", "raise_error", "AppException", "hash_password", "verify_password", "has_role" , "require_roles", "success_response", "error_response", "send_email", "init_admin_user"]
+from .model_predict import predict_image
+__all__ = ["create_access_token", "verify_access_token", "raise_error", "AppException", "hash_password", "verify_password", "has_role" , "require_roles", "success_response", "error_response", "send_email", "init_admin_user", "predict_image"]

@@ -1,4 +1,5 @@
 import os, random, string, shutil
+import numpy as np
 from typing import List, Optional
 from fastapi import (
     APIRouter,
@@ -14,12 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from pathlib import Path
 from sqlalchemy import text
-
+import shutil, os
 
 from lib.config.database import get_async_session
 from lib.models.sql import User, Result
 from lib.schemas import ResultRead, ResultCreate, PaginatedResultResponse
-from lib.utils import send_email, hash_password
+from lib.utils import send_email, hash_password, predict_image
 from lib.routes.user import get_current_user
 
 router = APIRouter(prefix="/results", tags=["Results"])
@@ -31,6 +32,84 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 # =========================================
 # CREATE RESULT ENTRY (auto-create user)
 # =========================================
+# @router.post("/", response_model=ResultRead, status_code=status.HTTP_201_CREATED)
+# async def create_result_entry(
+#     email: str = Form(...),
+#     name: str = Form("Unknown User"),
+#     age: Optional[int] = Form(None),
+#     gender: Optional[str] = Form(None),
+#     files: List[UploadFile] = File(...),
+#     session: AsyncSession = Depends(get_async_session),
+#     current_user: User = Depends(get_current_user),
+# ):
+#     """
+#     ✅ Create result entry.
+#     - If user doesn't exist → auto-create and email credentials
+#     - Saves uploaded images in /uploads/results/<user_id>/
+#     - Stores created_by = logged-in user id
+#     """
+
+#     # 1️⃣ Check or create user
+#     result = await session.execute(select(User).where(User.email == email))
+#     user = result.scalar_one_or_none()
+
+#     if not user:
+#         random_password = "".join(random.choices(string.ascii_letters + string.digits, k=10))
+#         hashed_pw = hash_password(random_password)
+#         user = User(name=name, email=email, password=hashed_pw, role="user", otp_verified=True)
+#         session.add(user)
+#         await session.commit()
+#         await session.refresh(user)
+
+#         try:
+#             subject = "Your Oral Cancer AI Account"
+#             body = f"""
+# Hello {name},
+
+# An account has been created for you on the Oral Cancer AI Platform.
+
+# 🔹 Email: {email}
+# 🔹 Temporary Password: {random_password}
+
+# Please log in and change your password after first login.
+
+# Regards,  
+# Oral Cancer AI Team
+# """
+#             await send_email(subject, [email], body)
+#         except Exception as e:
+#             print(f"⚠️ Failed to send email: {e}")
+
+#     # 2️⃣ Save images
+#     user_folder = UPLOAD_DIR / str(user.id)
+#     user_folder.mkdir(parents=True, exist_ok=True)
+
+#     saved_paths = []
+#     for file in files:
+#         filename = f"{user.id}_{file.filename}"
+#         file_path = user_folder / filename
+#         with open(file_path, "wb") as buffer:
+#             shutil.copyfileobj(file.file, buffer)
+#         saved_paths.append(str(file_path))
+
+#     # 3️⃣ Create result
+#     new_result = Result(
+#         user_id=user.id,
+#         created_by=current_user.id,
+#         age=age,
+#         gender=gender,
+#         result=None,
+#         confidence=None,
+#         images=saved_paths,
+#     )
+
+#     session.add(new_result)
+#     await session.commit()
+#     await session.refresh(new_result)
+
+#     return new_result
+
+
 @router.post("/", response_model=ResultRead, status_code=status.HTTP_201_CREATED)
 async def create_result_entry(
     email: str = Form(...),
@@ -42,10 +121,10 @@ async def create_result_entry(
     current_user: User = Depends(get_current_user),
 ):
     """
-    ✅ Create result entry.
-    - If user doesn't exist → auto-create and email credentials
-    - Saves uploaded images in /uploads/results/<user_id>/
-    - Stores created_by = logged-in user id
+    ✅ Create result entry with ML predictions.
+    - Saves all uploaded oral images.
+    - Predicts each with ML model.
+    - Calculates average confidence & final label.
     """
 
     # 1️⃣ Check or create user
@@ -77,13 +156,16 @@ Oral Cancer AI Team
 """
             await send_email(subject, [email], body)
         except Exception as e:
-            print(f"⚠️ Failed to send email: {e}")
+            print(f"⚠️ Email send failed: {e}")
 
     # 2️⃣ Save images
     user_folder = UPLOAD_DIR / str(user.id)
     user_folder.mkdir(parents=True, exist_ok=True)
 
     saved_paths = []
+    predictions = []
+    confidences = []
+
     for file in files:
         filename = f"{user.id}_{file.filename}"
         file_path = user_folder / filename
@@ -91,14 +173,25 @@ Oral Cancer AI Team
             shutil.copyfileobj(file.file, buffer)
         saved_paths.append(str(file_path))
 
-    # 3️⃣ Create result
+        # 🔮 Predict with model
+        label, conf = predict_image(str(file_path))
+        predictions.append(label)
+        confidences.append(conf)
+
+    # 3️⃣ Calculate overall result
+    avg_conf = round(float(np.mean(confidences)) * 100, 2)
+    cancer_votes = predictions.count("CANCER")
+    non_cancer_votes = predictions.count("NON CANCER")
+    final_result = "CANCER" if cancer_votes > non_cancer_votes else "NON CANCER"
+
+    # 4️⃣ Save result entry in DB
     new_result = Result(
         user_id=user.id,
         created_by=current_user.id,
         age=age,
         gender=gender,
-        result=None,
-        confidence=None,
+        result=final_result,
+        confidence=avg_conf,
         images=saved_paths,
     )
 
